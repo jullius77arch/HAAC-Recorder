@@ -1,0 +1,113 @@
+<Page
+    x:Class="HaacRecorder.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:HaacRecorder"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel x:Name="HeaderPanel" Grid.Row="0" Margin="20,40,20,20">
+            <TextBlock x:Name="TitleText" Text="HAAC Recorder" FontSize="32" FontWeight="Bold"/>
+            <TextBlock x:Name="SubtitleText" Text="16bit Stereo PCM 48kHz Audio"
+                       FontSize="16" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Margin="20" VerticalAlignment="Top">
+
+            <!-- Buttons live in a 3x3 grid so orientation changes can just move
+                 them between "one per row, full width" (portrait) and "all in
+                 row 0, one per column" (landscape) via code-behind — no need
+                 to recreate or reparent the controls themselves. -->
+            <Grid x:Name="ButtonRow">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="StartButton" Content="Start Recording"
+                        Click="StartButton_Click" Height="80" FontSize="24"
+                        Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,10"/>
+                <Button x:Name="StopButton" Content="Stop Recording"
+                        Click="StopButton_Click" IsEnabled="False" Height="80" FontSize="24"
+                        Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,10"/>
+                <Button x:Name="LockButton" Content="Lock Screen"
+                        Click="LockButton_Click" IsEnabled="False" Height="80" FontSize="24"
+                        Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"/>
+            </Grid>
+
+            <TextBlock x:Name="StatusText" Text="Ready." Margin="0,30,0,0"
+                       FontSize="20" TextWrapping="Wrap"/>
+            <TextBlock x:Name="FreeSpaceText" Margin="0,10,0,0"
+                       FontSize="18" TextWrapping="Wrap" Opacity="0.8"/>
+            <TextBlock x:Name="FileInfoText" Margin="0,20,0,0"
+                       FontSize="18" TextWrapping="Wrap" Opacity="0.8"/>
+        </StackPanel>
+
+        <!-- Full-screen "locked" overlay. Sits on top of everything (last child,
+             spans both rows) so it blocks taps on Start/Stop/Lock while showing. -->
+        <Grid x:Name="LockOverlay" Grid.RowSpan="2" Background="Black" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" Margin="40,0,40,0">
+                <TextBlock Text="Recording — Locked" Foreground="White" FontSize="28"
+                           HorizontalAlignment="Center" Margin="0,0,0,60" TextWrapping="Wrap"/>
+                <TextBlock Text="Slide to unlock" Foreground="Gray" FontSize="18"
+                           HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                <Slider x:Name="UnlockSlider" Minimum="0" Maximum="100"
+                        ValueChanged="UnlockSlider_ValueChanged"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Splash overlay. Visible by default, so it's the very first thing
+             shown when this page is created (i.e. a real cold launch). It's
+             hidden in code-behind after ~2 seconds, and shown again briefly
+             in App_Resuming whenever the app comes back from a suspended
+             state — Windows Phone doesn't re-run App.OnLaunched for that
+             case (only Resuming fires), so this is the one place that's
+             guaranteed to run every time the user reopens the app. Declared
+             last so it draws above LockOverlay too. -->
+        <Grid x:Name="SplashOverlay" Grid.RowSpan="2"
+              Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Grid Width="120" Height="160" Margin="0,0,0,30">
+                    <!-- Mic head -->
+                    <Border Width="60" Height="90" CornerRadius="30"
+                            Background="{ThemeResource PhoneAccentBrush}"
+                            VerticalAlignment="Top" HorizontalAlignment="Center"/>
+                    <!-- Stand arc -->
+                    <Ellipse Width="90" Height="90" StrokeThickness="6"
+                             Stroke="{ThemeResource PhoneAccentBrush}"
+                             VerticalAlignment="Top" HorizontalAlignment="Center"
+                             Margin="0,25,0,0">
+                        <Ellipse.Clip>
+                            <RectangleGeometry Rect="0,45,90,45"/>
+                        </Ellipse.Clip>
+                    </Ellipse>
+                    <!-- Stand post -->
+                    <Rectangle Width="6" Height="35"
+                               Fill="{ThemeResource PhoneAccentBrush}"
+                               VerticalAlignment="Top" HorizontalAlignment="Center"
+                               Margin="0,110,0,0"/>
+                    <!-- Base -->
+                    <Rectangle Width="60" Height="6"
+                               Fill="{ThemeResource PhoneAccentBrush}"
+                               VerticalAlignment="Top" HorizontalAlignment="Center"
+                               Margin="0,145,0,0"/>
+                </Grid>
+                <TextBlock Text="HAAC Recorder" FontSize="32" FontWeight="Bold"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>
