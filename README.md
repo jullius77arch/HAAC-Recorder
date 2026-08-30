@@ -50,6 +50,10 @@ Most phone recording apps run audio through AGC, echo cancellation, and noise su
 - WinRT (XAML) app, not Silverlight.
 - `MediaCategory.Other` is used instead of `Communications` to avoid voice-call-style processing on some Lumia firmware.
 
+## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
 ---
 
 <div align="center">
