@@ -14,7 +14,7 @@
 
 ---
 
-Most recording apps run audio through AGC, echo cancellation, and noise suppression. **HAAC Recorder tries to skip all of that**, pulling raw audio straight from the HAAC mics found on select Nokia Lumia phones — ideal for loud sources like concerts or instruments.
+Most recording apps run audio through AGC, echo cancellation, and noise suppression. **HAAC Recorder tries to skip all of that**, pulling raw audio straight from the HAAC mics found on select Nokia Lumia phones — ideal for loud sources like concerts or instruments. This app is not meant for voice recordings when used in RAW mode, as it does not provide any auto gain to boost the sound.
 
 ## 🎯 How It Works
 
@@ -26,8 +26,6 @@ At the moment you hit **Start**, the app negotiates the best available quality a
 | 2 | Stereo | Standard | Two channels, driver applies its own processing |
 | 3 | Mono | Raw | One channel, no processing |
 | 4 | Mono | Standard | Fallback of last resort |
-
-**Stereo is preferred over raw** — a lost channel can never be recovered, while processing artifacts are just a matter of degree. The subtitle always shows what was actually negotiated, not what was requested.
 
 ## 📁 Output
 
@@ -52,8 +50,12 @@ A pre-built `.appx` release will also be made available for sideloading, for any
 Don't have a GitHub account but hit a bug? Email **start-07axed@icloud.com**.
 
 I'm also just as interested in hearing:
-- Whether you find the app useful day-to-day
+- Whether you find the app useful
 - Your phone model, and whether it supports RAW audio capture
+
+Known Supported HAAC phones
+1520 - RAW
+928 - standard
 
 ## License
 
