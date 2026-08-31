@@ -53,9 +53,9 @@ I'm also just as interested in hearing:
 - Whether you find the app useful
 - Your phone model, and whether it supports RAW audio capture
 
-Known Supported HAAC phones
-1520 - RAW
-928 - standard
+Known Supported Lumia HAAC phones:
+1520 RAW
+928 standard
 
 ## License
 
