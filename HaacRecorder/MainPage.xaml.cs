@@ -60,6 +60,12 @@ namespace HaacRecorder
         // Repo URL for the Info overlay.
         private const string GitHubRepoUrl = "https://github.com/jullius77arch/HAAC-Recorder";
 
+        // Feedback address for the Info overlay. Kept as a plain mailto:
+        // link (rather than requiring a GitHub account) so anyone can send
+        // a bug report, a note on whether they find the app useful, or
+        // their phone model and whether it supports RAW capture.
+        private const string FeedbackEmail = "start-07axed@icloud.com";
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -492,6 +498,17 @@ namespace HaacRecorder
             await Windows.System.Launcher.LaunchUriAsync(new Uri(GitHubRepoUrl));
         }
 
+        /// <summary>
+        /// Opens the default mail app with a blank message addressed to the
+        /// feedback inbox. Exists for people who hit a bug but don't have (or
+        /// don't want to make) a GitHub account, and doubles as a channel for
+        /// general "is this useful" and phone-model/RAW-support feedback.
+        /// </summary>
+        private async void FeedbackEmailLink_Click(object sender, RoutedEventArgs e)
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri("mailto:" + FeedbackEmail));
+        }
+
         private void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
         {
             e.Handled = true;
@@ -640,7 +657,14 @@ namespace HaacRecorder
                 TitleText.FontSize = 26;
                 SubtitleText.FontSize = 14;
 
-                // Info button tracks the header's tightened top margin.
+                // Info button goes back to being a small utility button in
+                // the header's top-right corner, same as before this button
+                // grew a text label — there's no cramped-reach problem in
+                // landscape, so no need to drop it down next to Lock Screen.
+                Grid.SetRow(InfoButton, 0);
+                InfoButton.Width = 70;
+                InfoButton.Height = 40;
+                InfoButton.FontSize = 16;
                 InfoButton.Margin = new Thickness(0, 15, 20, 0);
 
                 // All three buttons side-by-side in one row instead of stacked.
@@ -670,9 +694,6 @@ namespace HaacRecorder
                 TitleText.FontSize = 32;
                 SubtitleText.FontSize = 16;
 
-                // Info button tracks the header's default top margin.
-                InfoButton.Margin = new Thickness(0, 40, 20, 0);
-
                 Grid.SetRow(StartButton, 0);
                 Grid.SetColumn(StartButton, 0);
                 Grid.SetColumnSpan(StartButton, 3);
@@ -683,10 +704,30 @@ namespace HaacRecorder
                 Grid.SetColumnSpan(StopButton, 3);
                 StopButton.Margin = new Thickness(0, 0, 0, 10);
 
+                // Narrowed from a full-width span (3 columns) to 2, leaving
+                // the rightmost column open for the Info button below.
                 Grid.SetRow(LockButton, 2);
                 Grid.SetColumn(LockButton, 0);
-                Grid.SetColumnSpan(LockButton, 3);
-                LockButton.Margin = new Thickness(0, 0, 0, 0);
+                Grid.SetColumnSpan(LockButton, 2);
+                LockButton.Margin = new Thickness(0, 0, 10, 0);
+
+                // Info button drops down to sit beside Lock Screen instead of
+                // hugging the header, since that corner is an awkward reach
+                // on small displays like the Lumia 928. It isn't actually a
+                // member of the ButtonRow grid, so its position is worked out
+                // by hand rather than by column: it lives in the same outer
+                // Grid.Row as the StackPanel ("1"), and its top margin is the
+                // StackPanel's own top margin (20) plus the combined height of
+                // the Start and Stop rows above Lock Screen (80 + 10 each =
+                // 180), landing its top edge flush with Lock Screen's. Height
+                // matches Lock Screen's 80 so the two bottoms align too, and
+                // the right margin matches the StackPanel's so its right edge
+                // sits flush with the page's content edge.
+                Grid.SetRow(InfoButton, 1);
+                InfoButton.Width = 90;
+                InfoButton.Height = 80;
+                InfoButton.FontSize = 20;
+                InfoButton.Margin = new Thickness(0, 200, 20, 0);
 
                 StatusText.Margin = new Thickness(0, 30, 0, 0);
                 FreeSpaceText.Margin = new Thickness(0, 10, 0, 0);

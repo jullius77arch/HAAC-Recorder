@@ -20,15 +20,25 @@
         </StackPanel>
 
         <!-- Info button. Lives outside the 3x3 ButtonRow since it's a utility
-             action, not part of the recording workflow. Sits as a sibling of
-             HeaderPanel in this same Grid.Row so it overlays in the top-right
-             corner without disturbing HeaderPanel's own layout. Disabled while
-             recording so the repo/version overlay can't be opened mid-take. -->
-        <Button x:Name="InfoButton" Content="&#9432;" FontSize="22"
-                Width="44" Height="44" Padding="0"
+             action, not part of the recording workflow, but its position
+             still tracks orientation (see ApplyOrientationLayout):
+             - Landscape: small utility button in the header's top-right
+               corner, same as before.
+             - Portrait: on small displays (e.g. Lumia 928) the header
+               corner sits too high to be a comfortable reach, so instead
+               it's dropped down to sit to the right of Lock Screen, with
+               Grid.Row switched to "1" and a calculated top margin so it
+               lines up with that button's row. Lock Screen's ColumnSpan is
+               narrowed to 2 in portrait to leave it room.
+             Disabled while recording so the repo/version overlay can't be
+             opened mid-take. Default values below are the portrait ones,
+             since that's the common launch orientation; ApplyOrientationLayout
+             overwrites them immediately if the phone is actually landscape. -->
+        <Button x:Name="InfoButton" Content="Info" FontSize="20"
+                Width="90" Height="80" Padding="0"
                 Click="InfoButton_Click"
-                Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
-                Margin="0,40,20,0"/>
+                Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,200,20,0"/>
 
         <StackPanel Grid.Row="1" Margin="20" VerticalAlignment="Top">
 
@@ -56,7 +66,7 @@
                         Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,0,0,10"/>
                 <Button x:Name="LockButton" Content="Lock Screen"
                         Click="LockButton_Click" IsEnabled="False" Height="80" FontSize="24"
-                        Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"/>
+                        Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,0"/>
             </Grid>
 
             <TextBlock x:Name="StatusText" Text="Ready." Margin="0,30,0,0"
@@ -85,20 +95,27 @@
              and dismissed with the Close button. Sits above LockOverlay in
              z-order (declared after it) but below SplashOverlay. -->
         <Grid x:Name="InfoOverlay" Grid.RowSpan="2" Background="Black" Visibility="Collapsed">
-            <StackPanel VerticalAlignment="Center" Margin="30,0,30,0">
-                <TextBlock Text="HAAC Recorder" Foreground="White" FontSize="28" FontWeight="Bold"
-                           HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                <TextBlock Foreground="White" FontSize="16" TextWrapping="Wrap" Margin="0,0,0,20"
-                           Text="HAAC Recorder captures raw, unprocessed PCM audio using the HAAC (High Amplitude Audio Capture) mics found on select Nokia Lumia phones. Unlike standard recording apps, it bypasses AGC, echo cancellation, and noise suppression, preserving the true signal — ideal for loud sources like concerts or instruments."/>
-                <HyperlinkButton Content="github.com/jullius77arch/HAAC-Recorder"
-                                 Click="GitHubLink_Click" Foreground="{ThemeResource PhoneAccentBrush}"
-                                 FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,20"/>
-                <TextBlock x:Name="InfoVersionText" Foreground="Gray" FontSize="14"
-                           HorizontalAlignment="Center"/>
-                <TextBlock Text="© 2026" Foreground="Gray" FontSize="14"
-                           HorizontalAlignment="Center" Margin="0,4,0,30"/>
-                <Button Content="Close" Click="InfoCloseButton_Click" HorizontalAlignment="Center" Width="160"/>
-            </StackPanel>
+            <ScrollViewer VerticalAlignment="Center" Margin="30,0,30,0">
+                <StackPanel>
+                    <TextBlock Text="HAAC Recorder" Foreground="White" FontSize="28" FontWeight="Bold"
+                               HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                    <TextBlock Foreground="White" FontSize="16" TextWrapping="Wrap" Margin="0,0,0,16"
+                               Text="Most recording apps run audio through AGC, echo cancellation, and noise suppression. HAAC Recorder tries to skip all of that, pulling raw audio straight from the HAAC mics found on select Nokia Lumia phones — ideal for loud sources like concerts or instruments."/>
+                    <TextBlock Foreground="White" FontSize="16" TextWrapping="Wrap" Margin="0,0,0,20"
+                               Text="At Start, it negotiates the best available quality automatically — trying stereo raw, then stereo standard, then mono raw, then mono standard — until one works."/>
+                    <HyperlinkButton Content="github.com/jullius77arch/HAAC-Recorder"
+                                     Click="GitHubLink_Click" Foreground="{ThemeResource PhoneAccentBrush}"
+                                     FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                    <HyperlinkButton Content="start-07axed@icloud.com"
+                                     Click="FeedbackEmailLink_Click" Foreground="{ThemeResource PhoneAccentBrush}"
+                                     FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                    <TextBlock x:Name="InfoVersionText" Foreground="Gray" FontSize="14"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="© 2026" Foreground="Gray" FontSize="14"
+                               HorizontalAlignment="Center" Margin="0,4,0,30"/>
+                    <Button Content="Close" Click="InfoCloseButton_Click" HorizontalAlignment="Center" Width="160"/>
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
 
         <!-- Splash overlay. Visible by default, so it's the very first thing
