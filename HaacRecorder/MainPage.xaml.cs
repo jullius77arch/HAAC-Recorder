@@ -1,9 +1,11 @@
 using System;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
+using Windows.Devices.Enumeration;
 using Windows.Graphics.Display;
 using Windows.Media;
 using Windows.Media.Capture;
+using Windows.Media.Devices;
 using Windows.Media.MediaProperties;
 using Windows.Phone.UI.Input;
 using Windows.Storage;
@@ -33,9 +35,30 @@ namespace HaacRecorder
         // place so the free-space estimate always matches what we actually
         // record.
         private const int SampleRateHz = 48000;
-        private const int Channels = 2;
+
+        // Attempted first on every recording; falls back to mono if the
+        // device rejects stereo (see TryStartRecordingAsync). Some
+        // HAAC-equipped Lumias (the 92x family in particular) only expose a
+        // mono raw capture path depending on firmware, even though the
+        // hardware itself has multiple HAAC mics.
+        private int _channels = 2;
+
         private const int BytesPerSample = 2; // 16-bit
-        private const long BytesPerSecond = SampleRateHz * Channels * BytesPerSample; // 192,000
+
+        // A regular get-only property (not an expression-bodied member —
+        // that's C# 6 syntax, and this project builds with VS2013's
+        // default C# 5 compiler) so it always reflects the current
+        // _channels value after a stereo/mono fallback.
+        private long BytesPerSecond
+        {
+            get { return SampleRateHz * _channels * BytesPerSample; }
+        }
+
+        // Whether AudioProcessing.Raw was actually granted for the current
+        // recording (checked/set in InitializeCaptureAsync). Not every
+        // phone's audio driver supports the "raw" DDI, even on HAAC
+        // hardware — see IsRawProcessingSupportedAsync.
+        private bool _rawProcessingUsed;
 
         // Repo URL for the Info overlay. Not public yet — the link will 404
         // (or the phone will show a "can't open" toast) until the repo is
@@ -90,20 +113,34 @@ namespace HaacRecorder
                 _recordingFolder = await KnownFolders.MusicLibrary.CreateFolderAsync(
                     "recordings", CreationCollisionOption.OpenIfExists);
 
-                // Stereo, 16-bit, 48kHz PCM inside a WAV container.
-                // We build the profile with CreateWav() to get the right container,
-                // then overwrite the Audio properties with the exact raw PCM spec.
-                var profile = MediaEncodingProfile.CreateWav(AudioEncodingQuality.High);
-                profile.Audio = AudioEncodingProperties.CreatePcm(
-                    SampleRateHz, Channels, BytesPerSample * 8);
-
                 var fileName = string.Format(
                     "HaacRecording-{0}.wav", DateTime.Now.ToString("yyyy-MM-dd-HHmmss"));
 
                 _recordingFile = await _recordingFolder.CreateFileAsync(
                     fileName, CreationCollisionOption.GenerateUniqueName);
 
-                await _mediaCapture.StartRecordToStorageFileAsync(profile, _recordingFile);
+                // Try stereo first. Some HAAC-equipped Lumias (the 92x family
+                // in particular) only expose a mono raw capture path
+                // depending on firmware, and StartRecordToStorageFileAsync
+                // throws an ArgumentException ("value does not fall within
+                // the expected range") if the requested channel count isn't
+                // supported there. Fall back to mono once instead of failing
+                // outright.
+                _channels = 2;
+                bool started = await TryStartRecordingAsync(_channels);
+
+                if (!started)
+                {
+                    _channels = 1;
+                    started = await TryStartRecordingAsync(_channels);
+                }
+
+                if (!started)
+                {
+                    try { await _recordingFile.DeleteAsync(); } catch { /* best effort */ }
+                    throw new InvalidOperationException(
+                        "This device didn't accept stereo or mono raw PCM capture.");
+                }
 
                 _isRecording = true;
                 StopButton.IsEnabled = true;
@@ -113,6 +150,11 @@ namespace HaacRecorder
                 // but disabling it here keeps the user from wandering into it
                 // (and having Back suppressed on top of an overlay) mid-take.
                 InfoButton.IsEnabled = false;
+
+                SubtitleText.Text = string.Format(
+                    "16bit {0} PCM 48kHz Audio — {1}",
+                    _channels == 2 ? "Stereo" : "Mono",
+                    _rawProcessingUsed ? "Raw" : "Standard processing");
 
                 // Live "RECORDING hh:mm:ss" display. Driven off wall-clock time
                 // (not a tick counter) so it can't drift, and it only ever
@@ -149,6 +191,33 @@ namespace HaacRecorder
                 StatusText.Text = "Failed to start: " + failure.Message;
                 StartButton.IsEnabled = true;
                 CleanupCapture();
+            }
+        }
+
+        /// <summary>
+        /// Attempts to start recording with the given channel count. Returns
+        /// false (instead of throwing) specifically when the device rejects
+        /// that channel count, so the caller can retry with a different
+        /// value. Any other kind of failure is rethrown to the existing
+        /// top-level catch in StartButton_Click.
+        /// </summary>
+        private async Task<bool> TryStartRecordingAsync(int channels)
+        {
+            // Stereo, 16-bit, 48kHz PCM inside a WAV container.
+            // We build the profile with CreateWav() to get the right container,
+            // then overwrite the Audio properties with the exact raw PCM spec.
+            var profile = MediaEncodingProfile.CreateWav(AudioEncodingQuality.High);
+            profile.Audio = AudioEncodingProperties.CreatePcm(
+                SampleRateHz, (uint)channels, BytesPerSample * 8);
+
+            try
+            {
+                await _mediaCapture.StartRecordToStorageFileAsync(profile, _recordingFile);
+                return true;
+            }
+            catch (ArgumentException)
+            {
+                return false;
             }
         }
 
@@ -206,6 +275,7 @@ namespace HaacRecorder
             StartButton.IsEnabled = true;
             LockButton.IsEnabled = false;
             InfoButton.IsEnabled = true;
+            SubtitleText.Text = "16bit Stereo PCM 48kHz Audio";
         }
 
         private async void LockButton_Click(object sender, RoutedEventArgs e)
@@ -333,6 +403,21 @@ namespace HaacRecorder
 
         private async Task InitializeCaptureAsync()
         {
+            // AudioProcessing.Raw isn't guaranteed to work on every phone —
+            // it requires the audio driver itself to support a raw
+            // signal-processing DDI, independent of whether the mic
+            // hardware is HAAC. Requesting Raw on a device whose driver
+            // doesn't support it throws an ArgumentException ("value does
+            // not fall within the expected range") from InitializeAsync.
+            // Microsoft's own guidance is to check
+            // System.Devices.AudioDevice.RawProcessingSupported first
+            // rather than assume — so we do that and fall back to Default
+            // processing when it's not supported. HAAC's anti-clipping
+            // behavior for loud sources happens in a hardware preamp stage
+            // either way, so Default still records cleanly in loud
+            // environments on phones that lack raw driver support.
+            _rawProcessingUsed = await IsRawProcessingSupportedAsync();
+
             var settings = new MediaCaptureInitializationSettings
             {
                 StreamingCaptureMode = StreamingCaptureMode.Audio,
@@ -343,14 +428,49 @@ namespace HaacRecorder
                 // voice-call-style processing on some Lumia firmware.
                 MediaCategory = MediaCategory.Other,
 
-                // This is the flag that matters: Raw disables AGC/AEC/NS and,
-                // on HAAC-equipped Lumia hardware, engages the high-amplitude
-                // mic path instead of the standard-gain path.
-                AudioProcessing = Windows.Media.AudioProcessing.Raw
+                AudioProcessing = _rawProcessingUsed
+                    ? Windows.Media.AudioProcessing.Raw
+                    : Windows.Media.AudioProcessing.Default
             };
 
             _mediaCapture = new MediaCapture();
             await _mediaCapture.InitializeAsync(settings);
+        }
+
+        /// <summary>
+        /// Checks whether the phone's default audio capture device
+        /// advertises support for "raw" signal processing mode, per
+        /// Microsoft's documented System.Devices.AudioDevice.RawProcessingSupported
+        /// property key. Returns false (rather than throwing) on any
+        /// failure, since the safe default is to not request Raw.
+        /// </summary>
+        private async Task<bool> IsRawProcessingSupportedAsync()
+        {
+            try
+            {
+                var deviceId = MediaDevice.GetDefaultAudioCaptureId(AudioDeviceRole.Default);
+                if (string.IsNullOrEmpty(deviceId))
+                {
+                    return false;
+                }
+
+                var extraProperties = new[] { "System.Devices.AudioDevice.RawProcessingSupported" };
+                var deviceInfo = await DeviceInformation.CreateFromIdAsync(deviceId, extraProperties);
+
+                object supported;
+                if (deviceInfo.Properties.TryGetValue(
+                        "System.Devices.AudioDevice.RawProcessingSupported", out supported)
+                    && supported is bool)
+                {
+                    return (bool)supported;
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private async Task UpdateEstimatedRecordingTimeAsync()
