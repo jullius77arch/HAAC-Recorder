@@ -37,6 +37,11 @@ namespace HaacRecorder
         private const int BytesPerSample = 2; // 16-bit
         private const long BytesPerSecond = SampleRateHz * Channels * BytesPerSample; // 192,000
 
+        // Repo URL for the Info overlay. Not public yet — the link will 404
+        // (or the phone will show a "can't open" toast) until the repo is
+        // made public, but the app itself doesn't need to change once it is.
+        private const string GitHubRepoUrl = "https://github.com/jullius77arch/HAAC-Recorder";
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -103,6 +108,11 @@ namespace HaacRecorder
                 _isRecording = true;
                 StopButton.IsEnabled = true;
                 LockButton.IsEnabled = true;
+
+                // Info opens an overlay with no connection to recording state,
+                // but disabling it here keeps the user from wandering into it
+                // (and having Back suppressed on top of an overlay) mid-take.
+                InfoButton.IsEnabled = false;
 
                 // Live "RECORDING hh:mm:ss" display. Driven off wall-clock time
                 // (not a tick counter) so it can't drift, and it only ever
@@ -195,6 +205,7 @@ namespace HaacRecorder
             CleanupCapture();
             StartButton.IsEnabled = true;
             LockButton.IsEnabled = false;
+            InfoButton.IsEnabled = true;
         }
 
         private async void LockButton_Click(object sender, RoutedEventArgs e)
@@ -219,6 +230,24 @@ namespace HaacRecorder
             LockOverlay.Visibility = Visibility.Collapsed;
             UnlockSlider.Value = 0;
             await StatusBar.GetForCurrentView().ShowAsync();
+        }
+
+        private void InfoButton_Click(object sender, RoutedEventArgs e)
+        {
+            var version = Package.Current.Id.Version;
+            InfoVersionText.Text = string.Format(
+                "Version {0}.{1}.{2}.{3}", version.Major, version.Minor, version.Build, version.Revision);
+            InfoOverlay.Visibility = Visibility.Visible;
+        }
+
+        private void InfoCloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            InfoOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async void GitHubLink_Click(object sender, RoutedEventArgs e)
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(GitHubRepoUrl));
         }
 
         private void HardwareButtons_BackPressed(object sender, BackPressedEventArgs e)
@@ -271,6 +300,7 @@ namespace HaacRecorder
                 StopButton.IsEnabled = false;
                 StartButton.IsEnabled = true;
                 LockButton.IsEnabled = false;
+                InfoButton.IsEnabled = true;
             }
 
             if (_suspendedWhileRecording)
@@ -290,6 +320,14 @@ namespace HaacRecorder
                 LockOverlay.Visibility = Visibility.Collapsed;
                 UnlockSlider.Value = 0;
                 await StatusBar.GetForCurrentView().ShowAsync();
+            }
+
+            // Same defensive cleanup for the Info overlay — nothing bad happens
+            // if it's left open across a suspend, but there's no reason to let
+            // it linger over a freshly-resumed session either.
+            if (InfoOverlay.Visibility == Visibility.Visible)
+            {
+                InfoOverlay.Visibility = Visibility.Collapsed;
             }
         }
 
@@ -381,6 +419,9 @@ namespace HaacRecorder
                 TitleText.FontSize = 26;
                 SubtitleText.FontSize = 14;
 
+                // Info button tracks the header's tightened top margin.
+                InfoButton.Margin = new Thickness(0, 15, 20, 0);
+
                 // All three buttons side-by-side in one row instead of stacked.
                 Grid.SetRow(StartButton, 0);
                 Grid.SetColumn(StartButton, 0);
@@ -407,6 +448,9 @@ namespace HaacRecorder
                 HeaderPanel.Margin = new Thickness(20, 40, 20, 20);
                 TitleText.FontSize = 32;
                 SubtitleText.FontSize = 16;
+
+                // Info button tracks the header's default top margin.
+                InfoButton.Margin = new Thickness(0, 40, 20, 0);
 
                 Grid.SetRow(StartButton, 0);
                 Grid.SetColumn(StartButton, 0);

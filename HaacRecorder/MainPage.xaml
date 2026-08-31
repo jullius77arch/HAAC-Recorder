@@ -19,6 +19,17 @@
                        FontSize="16" Opacity="0.7" Margin="0,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
 
+        <!-- Info button. Lives outside the 3x3 ButtonRow since it's a utility
+             action, not part of the recording workflow. Sits as a sibling of
+             HeaderPanel in this same Grid.Row so it overlays in the top-right
+             corner without disturbing HeaderPanel's own layout. Disabled while
+             recording so the repo/version overlay can't be opened mid-take. -->
+        <Button x:Name="InfoButton" Content="&#9432;" FontSize="22"
+                Width="44" Height="44" Padding="0"
+                Click="InfoButton_Click"
+                Grid.Row="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                Margin="0,40,20,0"/>
+
         <StackPanel Grid.Row="1" Margin="20" VerticalAlignment="Top">
 
             <!-- Buttons live in a 3x3 grid so orientation changes can just move
@@ -69,6 +80,27 @@
             </StackPanel>
         </Grid>
 
+        <!-- Info overlay. Shows a short description, the GitHub repo link, and
+             version/year info. Opened via InfoButton (disabled while recording)
+             and dismissed with the Close button. Sits above LockOverlay in
+             z-order (declared after it) but below SplashOverlay. -->
+        <Grid x:Name="InfoOverlay" Grid.RowSpan="2" Background="Black" Visibility="Collapsed">
+            <StackPanel VerticalAlignment="Center" Margin="30,0,30,0">
+                <TextBlock Text="HAAC Recorder" Foreground="White" FontSize="28" FontWeight="Bold"
+                           HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock Foreground="White" FontSize="16" TextWrapping="Wrap" Margin="0,0,0,20"
+                           Text="HAAC Recorder captures raw, unprocessed PCM audio using the HAAC (High Amplitude Audio Capture) mics found on select Nokia Lumia phones. Unlike standard recording apps, it bypasses AGC, echo cancellation, and noise suppression, preserving the true signal — ideal for loud sources like concerts or instruments."/>
+                <HyperlinkButton Content="github.com/jullius77arch/HAAC-Recorder"
+                                 Click="GitHubLink_Click" Foreground="{ThemeResource PhoneAccentBrush}"
+                                 FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                <TextBlock x:Name="InfoVersionText" Foreground="Gray" FontSize="14"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="© 2026" Foreground="Gray" FontSize="14"
+                           HorizontalAlignment="Center" Margin="0,4,0,30"/>
+                <Button Content="Close" Click="InfoCloseButton_Click" HorizontalAlignment="Center" Width="160"/>
+            </StackPanel>
+        </Grid>
+
         <!-- Splash overlay. Visible by default, so it's the very first thing
              shown when this page is created (i.e. a real cold launch). It's
              hidden in code-behind after ~2 seconds, and shown again briefly
@@ -76,7 +108,7 @@
              state — Windows Phone doesn't re-run App.OnLaunched for that
              case (only Resuming fires), so this is the one place that's
              guaranteed to run every time the user reopens the app. Declared
-             last so it draws above LockOverlay too. -->
+             last so it draws above LockOverlay and InfoOverlay too. -->
         <Grid x:Name="SplashOverlay" Grid.RowSpan="2"
               Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
